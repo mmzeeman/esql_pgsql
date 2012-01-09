@@ -1,0 +1,15 @@
+{application, esql_pgsql,
+ [
+  {description, "esql driver for pgsql"},
+  {vsn, "1"},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib,
+                  esql,
+                  pgsql 
+                 ]},
+  {mod, { esql_pgsql, []}},
+  {env, []}
+ ]}.
+
