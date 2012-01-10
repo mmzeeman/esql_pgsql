@@ -5,32 +5,45 @@
 -module(esql_pgsql).
 
 -include_lib("esql/include/esql.hrl").
+-include_lib("pgsql/include/pgsql.hrl").
+-include_lib("zutils/include/zutils.hrl").
 
 -behaviour(esql).
 
 -export([open/1, run/3,  execute/3, close/1, start_transaction/1, commit/1, rollback/1, tables/1, describe_table/2]).
 
-open(_Args) ->
-    {ok, fake_connection}.
+open(Args) ->
+    Host = proplists:get_value(host, Args, "localhost"),
+    Username = proplists:get_value(username, Args, []),
+    Password = proplists:get_value(password, Args, []),
+    {ok, C} = pgsql:connect(Host, Username, Password, Args).
 
-close(_Connection) ->
-    ok.
+close(Connection) ->
+    ok = pgsql:close(Connection).
 
-run(_Sql, _Args, _Connection) ->
-    ok.
+% execute the query, without returning results
+run(Sql, Args, Connection) ->
+    %% TODO: replace with a version which doesn't actually load the
+    %% results.
+    case pgsql:equery(Connection, Sql, Args) of
+	{ok, _Affected, _Cols, _Rows} -> ok;
+	{ok, _Cols, _Rows} -> ok;
+	{ok, _Rows} -> ok;
+	{error, Reason} -> {error, ?MODULE, Reason}
+    end.
     
+% execute the query, return the results
 execute(_Sql, _Args, _Connection) ->
     {ok, [], []}.
 
+start_transaction(Connection) ->    
+    run(<<"START TRANSACTION;">>, [], Connection).
 
-start_transaction(_Connection) ->    
-    ok.
-
-commit(_Connection) ->
-    ok.
-
-rollback(_Connection) ->
-    ok.
+commit(Connection) ->
+    run(<<"COMMIT;">>, [], Connection).
+    
+rollback(Connection) ->
+    run(<<"ROLLBACK;">>, [], Connection).
 
 tables(_Connection) ->
     {}.
