@@ -33,8 +33,23 @@ run(Sql, Args, Connection) ->
     end.
     
 % execute the query, return the results
-execute(_Sql, _Args, _Connection) ->
-    {ok, [], []}.
+execute(Sql, Args, Connection) ->
+    case pgsql:equery(Connection, Sql, Args) of
+	{ok, _Affected, Cols, Rows} -> 
+	    make_response(Cols, Rows);
+	{ok, Cols, Rows} -> 
+	    make_response(Cols, Rows);
+	{ok, Rows} -> 
+	    make_response(undefined, Rows);
+	{error, Reason} -> 
+	    {error, ?MODULE, Reason}
+    end.
+
+make_response(Cols, Rows) ->
+    ?DEBUG(Cols),
+    ECols = [z_convert:to_atom(B) || {_, B, _} <- Cols],
+    ERows = [ V  || {V, _} <- Rows],
+    ?DEBUG({ok, ECols, ERows}).
 
 start_transaction(Connection) ->    
     run(<<"START TRANSACTION;">>, [], Connection).
