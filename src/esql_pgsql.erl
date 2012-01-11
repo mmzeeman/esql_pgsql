@@ -1,6 +1,21 @@
+%% @author Maas-Maarten Zeeman <mmzeeman@xs4all.nl>
+%% @copyright 2012 Maas-Maarten Zeeman
+
+%% @doc Erlang driver for postgres databases
+
+%% Copyright 2012 Maas-Maarten Zeeman
 %%
-%% Exploring making a database driver for the generic gen_db interface
-%%
+%% Licensed under the Apache License, Version 2.0 (the "License");
+%% you may not use this file except in compliance with the License.
+%% You may obtain a copy of the License at
+%% 
+%%     http://www.apache.org/licenses/LICENSE-2.0
+%% 
+%% Unless required by applicable law or agreed to in writing, software
+%% distributed under the License is distributed on an "AS IS" BASIS,
+%% WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+%% See the License for the specific language governing permissions and
+%% limitations under the License.
 
 -module(esql_pgsql).
 
@@ -35,21 +50,16 @@ run(Sql, Args, Connection) ->
 % execute the query, return the results
 execute(Sql, Args, Connection) ->
     case pgsql:equery(Connection, Sql, Args) of
-	{ok, _Affected, Cols, Rows} -> 
-	    make_response(Cols, Rows);
-	{ok, Cols, Rows} -> 
-	    make_response(Cols, Rows);
-	{ok, Rows} -> 
-	    make_response(undefined, Rows);
+	{ok, _Affected, Cols, Rows} -> make_response(Cols, Rows);
+	{ok, Cols, Rows} -> make_response(Cols, Rows);
+	{ok, Rows} -> make_response([], Rows);
 	{error, Reason} -> 
 	    {error, ?MODULE, Reason}
     end.
 
 make_response(Cols, Rows) ->
-    ?DEBUG(Cols),
-    ECols = [z_convert:to_atom(B) || {_, B, _} <- Cols],
-    ERows = [ V  || {V, _} <- Rows],
-    ?DEBUG({ok, ECols, ERows}).
+    ECols = [z_convert:to_atom(Col#column.name) || Col <- Cols],
+    {ok, ECols, Rows}.
 
 start_transaction(Connection) ->    
     run(<<"START TRANSACTION;">>, [], Connection).
