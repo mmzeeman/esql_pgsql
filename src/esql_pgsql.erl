@@ -31,7 +31,7 @@ open(Args) ->
     Host = proplists:get_value(host, Args, "localhost"),
     Username = proplists:get_value(username, Args, []),
     Password = proplists:get_value(password, Args, []),
-    {ok, C} = pgsql:connect(Host, Username, Password, Args).
+    pgsql:connect(Host, Username, Password, Args).
 
 close(Connection) ->
     ok = pgsql:close(Connection).
@@ -70,8 +70,10 @@ commit(Connection) ->
 rollback(Connection) ->
     run(<<"ROLLBACK;">>, [], Connection).
 
-tables(_Connection) ->
-    {}.
+tables(Connection) ->
+    {ok, [table_name], Names} = execute(<<"select table_name from information_schema.tables where table_type='BASE TABLE' 
+                                                                             and table_schema = current_schema();">>, [], Connection),
+    [z_convert:to_atom(Name) || {Name} <- Names].
 
 describe_table(_Table, _Connection) ->
     undefined.
