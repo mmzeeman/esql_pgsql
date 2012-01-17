@@ -61,21 +61,44 @@ make_response(Cols, Rows) ->
     ECols = [z_convert:to_atom(Col#column.name) || Col <- Cols],
     {ok, ECols, Rows}.
 
+%%
+%%
 start_transaction(Connection) ->    
     run(<<"START TRANSACTION;">>, [], Connection).
 
+%%
+%%
 commit(Connection) ->
     run(<<"COMMIT;">>, [], Connection).
     
+%%
+%%
 rollback(Connection) ->
     run(<<"ROLLBACK;">>, [], Connection).
 
+%%
+%%
 tables(Connection) ->
-    {ok, [table_name], Names} = execute(<<"select table_name from information_schema.tables where table_type='BASE TABLE' 
-                                                                             and table_schema = current_schema();">>, [], Connection),
+    {ok, [table_name], Names} = execute(<<"SELECT table_name FROM information_schema.tables WHERE table_type='BASE TABLE' 
+                                                                             AND table_schema = current_schema();">>, [], Connection),
     [z_convert:to_atom(Name) || {Name} <- Names].
 
-describe_table(_Table, _Connection) ->
-    undefined.
+%%
+%%
+describe_table(Table, Connection) ->
+    ?DEBUG(execute(<<"SELECT * FROM information_schema.key_column_usage WHERE table_name = $1">>, [z_convert:to_binary(Table)], Connection)),
+
+    {ok, _, TableInfo} = execute(<<"SELECT c.column_name, c.data_type, c.column_default, c.is_nullable
+                 FROM information_schema.columns c 
+                 WHERE c.table_name=$1
+                 AND c.table_schema = current_schema() 
+                 ORDER BY c.ordinal_position;">>, [z_convert:to_binary(Table)], Connection), 
+    
+    [ #esql_column_info{name=z_convert:to_atom(Name), 
+			type=Type, 
+			default=Default, 
+			notnull=not z_utils:is_true(Nullable)} 
+      || {Name, Type, Default, Nullable} <- TableInfo].
+
     
 
