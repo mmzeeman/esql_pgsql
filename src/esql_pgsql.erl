@@ -86,19 +86,24 @@ tables(Connection) ->
 %%
 %%
 describe_table(Table, Connection) ->
-    ?DEBUG(execute(<<"SELECT * FROM information_schema.key_column_usage WHERE table_name = $1">>, [z_convert:to_binary(Table)], Connection)),
+    {ok, _, TableInfo} = execute(<<"SELECT c.column_name, data_type, c.column_default, is_nullable, t.constraint_type = 'PRIMARY KEY' AS pk
+  FROM information_schema.columns c
+    LEFT OUTER JOIN information_schema.key_column_usage u
+      ON c.table_name = u.table_name 
+      AND c.column_name = u.column_name
+        LEFT OUTER JOIN information_schema.table_constraints t
+        ON t.constraint_name = u.constraint_name 
+        AND t.table_name = u.table_name
+   WHERE c.table_name = $1 
+   AND c.table_schema = current_schema()
+   ORDER BY c.ordinal_position;">>, [z_convert:to_binary(Table)], Connection), 
 
-    {ok, _, TableInfo} = execute(<<"SELECT c.column_name, c.data_type, c.column_default, c.is_nullable
-                 FROM information_schema.columns c 
-                 WHERE c.table_name=$1
-                 AND c.table_schema = current_schema() 
-                 ORDER BY c.ordinal_position;">>, [z_convert:to_binary(Table)], Connection), 
-    
     [ #esql_column_info{name=z_convert:to_atom(Name), 
 			type=Type, 
 			default=Default, 
-			notnull=not z_utils:is_true(Nullable)} 
-      || {Name, Type, Default, Nullable} <- TableInfo].
+			notnull=not z_utils:is_true(Nullable),
+		        pk=Pk =:= true} 
+      || {Name, Type, Default, Nullable, Pk} <- TableInfo].
 
     
 
