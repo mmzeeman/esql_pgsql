@@ -1,0 +1,5 @@
+rebar
+ebin
+deps
+.eunit
+*~
