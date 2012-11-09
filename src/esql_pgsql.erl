@@ -24,7 +24,9 @@
 
 -behaviour(esql).
 
--export([open/1, run/3, execute/3, execute/4, close/1, start_transaction/1, commit/1, rollback/1, tables/1, describe_table/2]).
+-export([open/1, run/3, execute/3, execute/4, close/1, 
+         start_transaction/1, commit/1, rollback/1, 
+         tables/1, describe_table/2]).
 
 open(Args) ->
     Host = proplists:get_value(host, Args, "localhost"),
@@ -49,9 +51,12 @@ run(Sql, Args, Connection) ->
 % execute the query, return the results
 execute(Sql, Args, Connection) ->
     case pgsql:equery(Connection, Sql, Args) of
-        {ok, _Affected, Cols, Rows} -> make_response(Cols, Rows);
-        {ok, Cols, Rows} -> make_response(Cols, Rows);
-        {ok, Rows} -> make_response([], Rows);
+        {ok, _Affected, Cols, Rows} -> 
+            make_response(Cols, Rows);
+        {ok, Cols, Rows} -> 
+            make_response(Cols, Rows);
+        {ok, Rows} -> 
+            make_response([], Rows);
         {error, Reason} -> 
             {error, ?MODULE, Reason}
     end.
