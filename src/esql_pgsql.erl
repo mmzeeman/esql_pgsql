@@ -24,14 +24,28 @@
 
 -behaviour(esql).
 
--export([open/1, run/3, execute/3, execute/4, close/1, 
-         start_transaction/1, commit/1, rollback/1, 
-         tables/1, describe_table/2]).
+-export([
+    open/1, 
+    run/3, execute/3, execute/4, 
+    close/1, 
+    start_transaction/1, commit/1, rollback/1, 
+    table_exists/2, tables/1, describe_table/2]).
 
 open(Args) ->
-    Host = proplists:get_value(host, Args, "localhost"),
-    Username = proplists:get_value(username, Args, []),
-    Password = proplists:get_value(password, Args, []),
+    Defaults = [{host, "localhost"},
+                {port, 5432},
+                {password, []},
+                {username, []},
+                {database, []},
+                {schema, "public"}],
+
+    Args1 = lists:ukeysort(1, proplists:unfold(Args)),
+    connect(proplists:normalize(lists:ukeymerge(1, Args1, Defaults), [])).
+
+connect(Args) ->
+    Host = proplists:get_value(host, Args),
+    Username = proplists:get_value(username, Args),
+    Password = proplists:get_value(password, Args),
     pgsql:connect(Host, Username, Password, Args).
 
 close(Connection) ->
@@ -62,7 +76,7 @@ execute(Sql, Args, Connection) ->
     end.
 
 % 
-execute(Sql, Args, Connection, Extra) ->
+execute(_Sql, _Args, _Connection, _Extra) ->
     % TODO
     ok.
 
@@ -85,14 +99,17 @@ commit(Connection) ->
 rollback(Connection) ->
     run(<<"ROLLBACK;">>, [], Connection).
 
-%%
+%% 
+table_exists(Table, Connection) ->
+    {ok, _Names, [{Exists}]} = execute(<<"select exists(select table_name from information_schema.tables where table_name=$1);">>, [Table], Connection),
+    Exists.
+
 %%
 tables(Connection) ->
     {ok, [table_name], Names} = execute(<<"SELECT table_name FROM information_schema.tables WHERE table_type='BASE TABLE' 
                                                                              AND table_schema = current_schema();">>, [], Connection),
     [z_convert:to_atom(Name) || {Name} <- Names].
 
-%%
 %%
 describe_table(Table, Connection) ->
     {ok, _, TableInfo} = execute(<<"SELECT c.column_name, data_type, c.column_default, is_nullable, t.constraint_type = 'PRIMARY KEY' AS pk
@@ -113,6 +130,3 @@ describe_table(Table, Connection) ->
                         notnull=not z_convert:to_bool(Nullable),
                         pk=Pk =:= true} 
       || {Name, Type, Default, Nullable, Pk} <- TableInfo].
-
-    
-

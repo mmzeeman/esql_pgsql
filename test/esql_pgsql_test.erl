@@ -34,6 +34,12 @@ execute_test() ->
     {ok, [value], []} = esql:execute("select value from test_table1 where id=4;", C),    
     ok.
 
+table_exist_test() ->
+    {ok, C} = esql:open(esql_pgsql, ?DB),
+    true = esql:table_exists(test_table1, C),
+    false = esql:table_exists(does_not_exist, C),
+    ok.
+
 tables_test() ->
     %% 
     {ok, C} = esql:open(esql_pgsql, ?DB),
@@ -48,7 +54,7 @@ describe_table_test() ->
 simple_pool_test() ->
     application:start(esql),
     {ok, Pid} = esql_pool:create_pool(test_pool, 10,
-                                      [{serialized, false},
+                                      [{serialized, true},
                                        {driver, esql_pgsql},
                                        {args, ?DB}]),
 
