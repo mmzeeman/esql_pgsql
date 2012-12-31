@@ -101,13 +101,16 @@ rollback(Connection) ->
 
 %% 
 table_exists(Table, Connection) ->
-    {ok, _Names, [{Exists}]} = execute(<<"select exists(select table_name from information_schema.tables where table_name=$1);">>, [Table], Connection),
+    {ok, _Names, [{Exists}]} = execute(<<"SELECT exists(SELECT table_name 
+        FROM information_schema.tables WHERE table_name=$1 
+          AND table_schema = current_schema());">>, [Table], Connection),
     Exists.
 
 %%
 tables(Connection) ->
-    {ok, [table_name], Names} = execute(<<"SELECT table_name FROM information_schema.tables WHERE table_type='BASE TABLE' 
-                                                                             AND table_schema = current_schema();">>, [], Connection),
+    {ok, [table_name], Names} = execute(<<"SELECT table_name 
+        FROM information_schema.tables WHERE table_type='BASE TABLE' 
+          AND table_schema = current_schema();">>, [], Connection),
     [z_convert:to_atom(Name) || {Name} <- Names].
 
 %%
@@ -124,8 +127,7 @@ describe_table(Table, Connection) ->
    AND c.table_schema = current_schema()
    ORDER BY c.ordinal_position;">>, [z_convert:to_binary(Table)], Connection), 
 
-    [ #esql_column_info{name=z_convert:to_atom(Name), 
-                        type=Type, 
+    [#esql_column_info{name=z_convert:to_atom(Name), type=Type, 
                         default=Default, 
                         notnull=not z_convert:to_bool(Nullable),
                         pk=Pk =:= true} 
